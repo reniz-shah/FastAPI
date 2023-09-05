@@ -83,7 +83,7 @@ def getOutput(deviceId:str):
     path = os.path.dirname(fileName)
 
     logging.info(f'Sending csv file at path: {path} with name : {deviceId}.csv')
-    return FileResponse(fileName) )
+    return FileResponse(fileName) 
 
 
 if __name__ == '__main__':
