@@ -54,7 +54,7 @@ def sendHeader(requestData:HeaderPayloadDto):
     fn = os.path.join(currentDir, 'filesData.json')
     filesData = dict(json.loads(open(fn).read()))
     filePath = os.path.join(child_dir, requestData.deviceId)
-    fileName = os.path.join(filePath, "Session_" + (str(requestData.sessionStartTime).replace(':','-').replace('.','-') + ".bin"))
+    fileName = os.path.join(filePath, (str(requestData.sessionStartTime).replace(':','-').replace('.','-') + ".bin"))
 
     try:
         logging.info(f'Creating directories for user and device')
