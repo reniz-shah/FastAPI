@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 import os
@@ -24,6 +24,19 @@ class ReceiveDataPayloadDto(BaseModel):
 class EndSessionPayloadDto(BaseModel):
     deviceId : str
     sessionEndTime : str
+
+class UserDetailsDto(BaseModel):
+    userid : str
+    name : str
+    age : int
+    height : float
+    weight : float
+    password : str
+
+class LoginDetailsDto(BaseModel):
+    userid : str
+    password : str
+    
 
 
 def createDirectory(parent_dir,directory):
@@ -64,8 +77,51 @@ def get_subfolders_and_files(folder_path):
 def root():
     return {"message" : "Server running successfully"}
 
+@app.post("/signup", summary="Sign Up")
+def signup(userDetails : UserDetailsDto):
+    userid = userDetails.userid
+    name = userDetails.name
+    age = userDetails.age
+    height = userDetails.height
+    weight = userDetails.weight
+    password = userDetails.password
 
-@app.post("/startSession")
+    currentDir = os.getcwd()
+    userdbFile = os.path.join(currentDir, 'userdb.json')
+    userdb = dict(json.loads(open(userdbFile).read()))
+    userid = userid.replace(" ","")
+    if userid in userdb.keys():
+        raise HTTPException(status_code=409, detail="User Id already exists please try again with another user id")
+    userdb[userid] = {
+        "name" : name,
+        "age" : age,
+        "height" : height,
+        "weight" : weight,
+        "password" : password,
+    }
+    data = open(userdbFile,'w')
+    data.write(json.dumps(userdb))
+    data.close()
+    return {'message' : "User Created Successfully"}
+
+
+
+@app.post("/login", summary="Log in")
+def login(loginDetails : LoginDetailsDto):
+    userid = loginDetails.userid
+    password = loginDetails.password
+
+    currentDir = os.getcwd()
+    userdbFile = os.path.join(currentDir, 'userdb.json')
+    userdb = dict(json.loads(open(userdbFile).read()))
+    userid = userid.replace(" ","")
+    if userid in userdb.keys() and password == userdb[userid]['password']:
+        return {'isvalid':True}
+    else:
+        raise HTTPException(status_code=409, detail="Invalid user id or password")
+
+
+@app.post("/startSession", summary="Start Session")
 def startSession(requestData:HeaderPayloadDto):
     logging.info(f'/sendData called with payload : {requestData}')
     currentDir = os.path.join(os.getcwd(),"allUsers")
@@ -73,7 +129,7 @@ def startSession(requestData:HeaderPayloadDto):
     fn = os.path.join(currentDir, 'filesData.json')
     filesData = dict(json.loads(open(fn).read()))
     filePath = os.path.join(child_dir, requestData.deviceId)
-    fileName = os.path.join(filePath, (str(requestData.sessionStartTime).replace(':','-').replace('.','-') + ".bin"))
+    fileName = os.path.join(filePath, (str(requestData.sessionStartTime).replace('_','-').replace('.','-') + ".bin"))
 
     
     logging.info(f'Creating directories for user and device')
@@ -85,6 +141,7 @@ def startSession(requestData:HeaderPayloadDto):
         createDirectory(child_dir,requestData.deviceId)
         filesData[requestData.deviceId] = {'latest' : fileName, 'others' : []}
     except Exception as e:
+        logging.error("Error : ",str(e))
         pass
     
     if not os.path.isfile(fileName):
@@ -103,7 +160,7 @@ def startSession(requestData:HeaderPayloadDto):
     return {'message' : 'File created Successfully!!'}
 
 
-@app.post("/ongoingSession")
+@app.post("/ongoingSession", summary="Ongoing Session (Sending Data)")
 def ongoingSession(requestData:ReceiveDataPayloadDto):
     logging.info(f'/sendData called with payload : {requestData}')
     currentDir = os.path.join(os.getcwd(),"allUsers")
@@ -118,7 +175,7 @@ def ongoingSession(requestData:ReceiveDataPayloadDto):
     return {'message' : 'Successfully added data to file!!'}
 
 
-@app.post("/endSession")
+@app.post("/endSession", summary="End Session")
 def endSession(payload : EndSessionPayloadDto):
     logging.info(f'/endSession called with deviceId : {payload.deviceId}')
     payload.sessionEndTime = payload.sessionEndTime.replace(':','-').replace('.','-')
@@ -138,14 +195,14 @@ def endSession(payload : EndSessionPayloadDto):
     logging.info(f'Sending csv file at path: {path} with name : {payload.deviceId}.csv')
     return FileResponse(os.path.join(path, f"{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv") )
 
-@app.get("/{userId}/devices")
+@app.get("/{userId}/devices", summary="Get list of devices by userId")
 def getAllDevices(userId : str):
     currentDir = os.path.join(os.getcwd(),"allUsers")
     folder_path = os.path.join(currentDir, userId)
     subfolders = get_subfolders(folder_path)
     return subfolders
 
-@app.get("/{userId}/{deviceId}/recordings")
+@app.get("/{userId}/{deviceId}/recordings", summary="Get list of recordings by userId and deviceId")
 def getAllRecordings(userId : str, deviceId : str):
     currentDir = os.path.join(os.getcwd(),"allUsers")
     folder_path = os.path.join(currentDir, userId)
@@ -153,7 +210,7 @@ def getAllRecordings(userId : str, deviceId : str):
     subfolders = get_files_in_folder(folder_path)
     return subfolders
 
-@app.get("/{userId}/{deviceId}/{recordingId}")
+@app.get("/{userId}/{deviceId}/{recordingId}", summary="Get recording data by userId, deviceId, and recordingId")
 def getRecordingByUserIdAndDeviceId(userId : str, deviceId : str, recordingId:str):
     currentDir = os.path.join(os.getcwd(),"allUsers")
     filePath = os.path.join(currentDir, f"{userId}/{deviceId}/{recordingId}")
