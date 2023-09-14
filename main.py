@@ -79,6 +79,7 @@ def root():
 
 @app.post("/signup", summary="Sign Up")
 def signup(userDetails : UserDetailsDto):
+    logging.info(f"/signup called with user data : {userDetails}")
     userid = userDetails.userid
     name = userDetails.name
     age = userDetails.age
@@ -88,10 +89,13 @@ def signup(userDetails : UserDetailsDto):
 
     currentDir = os.getcwd()
     userdbFile = os.path.join(currentDir, 'userdb.json')
+    logging.info(f"reading userdb file...")
     userdb = dict(json.loads(open(userdbFile).read()))
     userid = userid.replace(" ","")
     if userid in userdb.keys():
+        logging.info(f"user alerady exist with user id : {userid}")
         raise HTTPException(status_code=409, detail="User Id already exists please try again with another user id")
+    logging.info(f"Adding user to userdb file with userid : {userid}")
     userdb[userid] = {
         "name" : name,
         "age" : age,
@@ -100,6 +104,7 @@ def signup(userDetails : UserDetailsDto):
         "password" : password,
     }
     data = open(userdbFile,'w')
+    logging.info(f"writing to file...")
     data.write(json.dumps(userdb))
     data.close()
     return {'message' : "User Created Successfully"}
@@ -108,16 +113,20 @@ def signup(userDetails : UserDetailsDto):
 
 @app.post("/login", summary="Log in")
 def login(loginDetails : LoginDetailsDto):
+    logging.info(f"/login called with credentials : {loginDetails}")
     userid = loginDetails.userid
     password = loginDetails.password
 
     currentDir = os.getcwd()
     userdbFile = os.path.join(currentDir, 'userdb.json')
+    logging.info(f"reading userdb file...")
     userdb = dict(json.loads(open(userdbFile).read()))
     userid = userid.replace(" ","")
     if userid in userdb.keys() and password == userdb[userid]['password']:
+        logging.info(f"User found with userid: {userid} and password: {password}")
         return {'isvalid':True}
     else:
+        logging.info(f"User not found with userid: {userid} and password: {password}")
         raise HTTPException(status_code=409, detail="Invalid user id or password")
 
 
@@ -132,12 +141,13 @@ def startSession(requestData:HeaderPayloadDto):
     fileName = os.path.join(filePath, (str(requestData.sessionStartTime).replace('_','-').replace('.','-') + ".bin"))
 
     
-    logging.info(f'Creating directories for user and device')
     try:
+        logging.info(f'Creating directory for user')
         createDirectory(currentDir,requestData.userId)
     except:
         pass
     try:
+        logging.info(f'Creating directory for device')
         createDirectory(child_dir,requestData.deviceId)
         filesData[requestData.deviceId] = {'latest' : fileName, 'others' : []}
     except Exception as e:
@@ -162,7 +172,10 @@ def startSession(requestData:HeaderPayloadDto):
 
 @app.post("/ongoingSession", summary="Ongoing Session (Sending Data)")
 def ongoingSession(requestData:ReceiveDataPayloadDto):
-    logging.info(f'/sendData called with payload : {requestData}')
+    logging.info(f'/ongoingSession called with payload : {requestData}')
+    if requestData.payload == []:
+        logging.info(f'/ongoingSession called with empty payload')
+        return {'message' : 'Empty data received'}
     currentDir = os.path.join(os.getcwd(),"allUsers")
     fn = os.path.join(currentDir, 'filesData.json')
     filesData = json.loads(open(fn).read())
@@ -190,28 +203,35 @@ def endSession(payload : EndSessionPayloadDto):
     logging.info("ascii to bin converted successfully")
     logging.info("generating breath rate")
     os.system(f"python3 breath_darshan.py {path}/output/result_PPI_{file}.txt {path} {path}/{payload.deviceId}_BR.csv")
-    os.system(f"python3 HR.py --input {path}/output/result_HR_HRV_{file}.txt --output {path}/{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv --bin {fileName} --breath {path}/{payload.deviceId}_BR.csv")
     logging.info("breath rate generated successfully")
+    os.system(f"python3 HR.py --input {path}/output/result_HR_HRV_{file}.txt --output {path}/{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv --bin {fileName} --breath {path}/{payload.deviceId}_BR.csv")
+    logging.info("csv file generated successfully")
     logging.info(f'Sending csv file at path: {path} with name : {payload.deviceId}.csv')
-    return FileResponse(os.path.join(path, f"{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv") )
+    return FileResponse(os.path.join(path, f"{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv"))
 
 @app.get("/{userId}/devices", summary="Get list of devices by userId")
 def getAllDevices(userId : str):
+    logging.info(f"Fetching list of devices with userid: {userId}")
     currentDir = os.path.join(os.getcwd(),"allUsers")
     folder_path = os.path.join(currentDir, userId)
     subfolders = get_subfolders(folder_path)
+    logging.info(f"Sending list of devices with userid: {userId}")
     return subfolders
 
 @app.get("/{userId}/{deviceId}/recordings", summary="Get list of recordings by userId and deviceId")
 def getAllRecordings(userId : str, deviceId : str):
+    logging.info(f"Fetching all recording of user: {userId} and device: {deviceId}")
     currentDir = os.path.join(os.getcwd(),"allUsers")
     folder_path = os.path.join(currentDir, userId)
     folder_path = os.path.join(folder_path, deviceId)
     subfolders = get_files_in_folder(folder_path)
+    logging.info(f"Sending all recording of user: {userId} and device: {deviceId}")
     return subfolders
 
 @app.get("/{userId}/{deviceId}/{recordingId}", summary="Get recording data by userId, deviceId, and recordingId")
 def getRecordingByUserIdAndDeviceId(userId : str, deviceId : str, recordingId:str):
+    logging.info(f"Fetching recording with userid: {userId} deviceid: {deviceId} and recording file: {recordingId}")
     currentDir = os.path.join(os.getcwd(),"allUsers")
     filePath = os.path.join(currentDir, f"{userId}/{deviceId}/{recordingId}")
+    logging.info(f"Sending recording with userid: {userId} deviceid: {deviceId} and recording file: {recordingId}")
     return FileResponse(filePath)
