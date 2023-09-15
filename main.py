@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 import os
 import json
@@ -26,15 +27,25 @@ class EndSessionPayloadDto(BaseModel):
     sessionEndTime : str
 
 class UserDetailsDto(BaseModel):
-    userid : str
-    name : str
-    age : int
-    height : float
-    weight : float
-    password : str
+    username : str = Field(title="Please enter username")
+    password : str = Field(title="Please enter password")
+    displayName: str = Field(default= "", title="Please enter displayName")
+    age: int = Field(default= 10, title="Please enter age")
+    gender: str = Field(default= "", title="Please enter gender")
+    userEmail: str = Field(default= "", title="Please enter userEmail")
+    contactInformation: str = Field(default= "", title="Please enter contactInformation")
+    medicalConditions: str = Field(default= "", title="Please enter medicalConditions")
+    medications: str = Field(default= "", title="Please enter medications")
+    fitnessGoals: str = Field(default= "", title="Please enter fitnessGoals")
+    fitnessPlan: str = Field(default= "", title="Please enter fitnessPlan")
+    chronicHealthConditions: str = Field(default= "", title="Please enter chronicHealthConditions")
+    medicationHistory: str = Field(default= "", title="Please enter medicationHistory")
+    dietaryHabits: str = Field(default= "", title="Please enter dietaryHabits")
+    sleepQuality: str = Field(default= "", title="Please enter sleepQuality")
+    notesComments: str = Field(default= "", title="Please enter notesComments")
 
 class LoginDetailsDto(BaseModel):
-    userid : str
+    username : str
     password : str
     
 
@@ -80,54 +91,77 @@ def root():
 @app.post("/signup", summary="Sign Up")
 def signup(userDetails : UserDetailsDto):
     logging.info(f"/signup called with user data : {userDetails}")
-    userid = userDetails.userid
-    name = userDetails.name
-    age = userDetails.age
-    height = userDetails.height
-    weight = userDetails.weight
+    username = userDetails.username
     password = userDetails.password
-
+    displayName = userDetails.displayName
+    age = userDetails.age
+    gender = userDetails.gender
+    userEmail = userDetails.userEmail
+    contactInformation = userDetails.contactInformation
+    medicalConditions = userDetails.medicalConditions
+    medications = userDetails.medications
+    fitnessGoals = userDetails.fitnessGoals
+    fitnessPlan = userDetails.fitnessPlan
+    chronicHealthConditions = userDetails.chronicHealthConditions
+    medicationHistory = userDetails.medicationHistory
+    dietaryHabits = userDetails.dietaryHabits
+    sleepQuality = userDetails.sleepQuality
+    notesComments = userDetails.notesComments
+    
     currentDir = os.getcwd()
     userdbFile = os.path.join(currentDir, 'userdb.json')
     logging.info(f"reading userdb file...")
     userdb = dict(json.loads(open(userdbFile).read()))
-    userid = userid.replace(" ","")
-    if userid in userdb.keys():
-        logging.info(f"user alerady exist with user id : {userid}")
-        raise HTTPException(status_code=409, detail="User Id already exists please try again with another user id")
-    logging.info(f"Adding user to userdb file with userid : {userid}")
-    userdb[userid] = {
-        "name" : name,
-        "age" : age,
-        "height" : height,
-        "weight" : weight,
+    username = username.replace(" ","")
+    if username in userdb.keys():
+        logging.info(f"user alerady exist with username : {username}")
+        returnMessage = "Username already exists please try again with another username"
+        return PlainTextResponse(str(returnMessage), status_code=409)
+    logging.info(f"Adding user to userdb file with username : {username}")
+    userdb[username] = {
+        "username" : username,
         "password" : password,
+        "displayName" : displayName,
+        "age" : age,
+        "gender" : gender,
+        "userEmail" : userEmail,
+        "contactInformation" : contactInformation,
+        "medicalConditions" : medicalConditions,
+        "medications" : medications,
+        "fitnessGoals" : fitnessGoals,
+        "fitnessPlan" : fitnessPlan,
+        "chronicHealthConditions" : chronicHealthConditions,
+        "medicationHistory" : medicationHistory,
+        "dietaryHabits" : dietaryHabits,
+        "sleepQuality" : sleepQuality,
+        "notesComments" : notesComments,
+        
     }
     data = open(userdbFile,'w')
     logging.info(f"writing to file...")
     data.write(json.dumps(userdb))
     data.close()
-    return {'message' : "User Created Successfully"}
+    return PlainTextResponse(str("User Created Successfully"), status_code=200)
 
 
 
 @app.post("/login", summary="Log in")
 def login(loginDetails : LoginDetailsDto):
     logging.info(f"/login called with credentials : {loginDetails}")
-    userid = loginDetails.userid
+    username = loginDetails.username
     password = loginDetails.password
 
     currentDir = os.getcwd()
     userdbFile = os.path.join(currentDir, 'userdb.json')
     logging.info(f"reading userdb file...")
     userdb = dict(json.loads(open(userdbFile).read()))
-    userid = userid.replace(" ","")
-    if userid in userdb.keys() and password == userdb[userid]['password']:
-        logging.info(f"User found with userid: {userid} and password: {password}")
-        return {'isvalid':True}
+    username = username.replace(" ","")
+    if username in userdb.keys() and password == userdb[username]['password']:
+        logging.info(f"User found with userid: {username} and password: {password}")
+        return PlainTextResponse(str("Login Successfully"), status_code=200)
     else:
-        logging.info(f"User not found with userid: {userid} and password: {password}")
-        raise HTTPException(status_code=409, detail="Invalid user id or password")
+        logging.info(f"User not found with userid: {username} and password: {password}")
+        return PlainTextResponse(str("Invalid username or password"), status_code=409)
 
 
 @app.post("/startSession", summary="Start Session")
@@ -193,26 +227,29 @@ def endSession(payload : EndSessionPayloadDto):
     logging.info(f'/endSession called with deviceId : {payload.deviceId}')
     payload.sessionEndTime = payload.sessionEndTime.replace(':','-').replace('.','-')
     currentDir = os.path.join(os.getcwd(),"allUsers")
-    fn = os.path.join(currentDir, 'filesData.json')
-    filesData = json.loads(open(fn).read())
-    fileName = filesData[payload.deviceId]['latest']
-    file = fileName.split('/')[-1].split('.')[0]
-    path = os.path.dirname(fileName)
+    filesDataPath = os.path.join(currentDir, 'filesData.json')
+    filesData = json.loads(open(filesDataPath).read())
+    latestFileName = filesData[payload.deviceId]['latest']
+    startTimestamp = latestFileName.split('/')[-1].split('.')[0]
+    deviceId = os.path.dirname(latestFileName)
+
     logging.info("converting bin to ascii and hr")
-    os.system(f"python3 VS_ppg_proc_v004_20230907_1930.py -i {path} -o {path} -a /home/ubuntu/data/vsstreamcodec -f False")
+    os.system(f"python3 VS_ppg_proc_v004_20230907_1930.py -i {deviceId} -o {deviceId} -a /home/ubuntu/data/vsstreamcodec -f False")
     logging.info("ascii to bin converted successfully")
+    
     logging.info("generating breath rate")
-    os.system(f"python3 breath_darshan.py {path}/output/result_PPI_{file}.txt {path} {path}/{payload.deviceId}_BR.csv")
+    os.system(f"python3 breath_darshan.py {deviceId}/output/result_PPI_{startTimestamp}.txt {deviceId} {deviceId}/{payload.deviceId}_BR.csv")
     logging.info("breath rate generated successfully")
-    os.system(f"python3 HR.py --input {path}/output/result_HR_HRV_{file}.txt --output {path}/{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv --bin {fileName} --breath {path}/{payload.deviceId}_BR.csv")
+
+    os.system(f"python3 HR.py --input {deviceId}/output/result_HR_HRV_{startTimestamp}.txt --output {deviceId}/{payload.deviceId}_{startTimestamp}_TO_{payload.sessionEndTime}.csv --bin {latestFileName} --breath {deviceId}/{payload.deviceId}_BR.csv")
     logging.info("csv file generated successfully")
-    logging.info(f'Sending csv file at path: {path} with name : {payload.deviceId}.csv')
-    return FileResponse(os.path.join(path, f"{payload.deviceId}_{file}_TO_{payload.sessionEndTime}.csv"))
+    logging.info(f'Sending csv file at path: {deviceId} with name : {payload.deviceId}.csv')
+    return FileResponse(os.path.join(deviceId, f"{payload.deviceId}_{startTimestamp}_TO_{payload.sessionEndTime}.csv"))
 
 @app.get("/{userId}/devices", summary="Get list of devices by userId")
 def getAllDevices(userId : str):
     logging.info(f"Fetching list of devices with userid: {userId}")
-    currentDir = os.path.join(os.getcwd(),"allUsers")
+    currentDir = os.path.join(os.getcwd(),"allUsers") 
     folder_path = os.path.join(currentDir, userId)
     subfolders = get_subfolders(folder_path)
     logging.info(f"Sending list of devices with userid: {userId}")
