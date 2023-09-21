@@ -14,7 +14,7 @@ app = FastAPI(title="Virtual Sense")
 
 class HeaderPayloadDto(BaseModel):
     deviceId : str
-    userId : str
+    username : str
     sessionStartTime : str
     frequency : str
 
@@ -112,7 +112,12 @@ def signup(userDetails : UserDetailsDto):
     userdbFile = os.path.join(currentDir, 'userdb.json')
     logging.info(f"reading userdb file...")
     userdb = dict(json.loads(open(userdbFile).read()))
-    username = username.replace(" ","")
+    
+    numberOfSpaces = username.find(" ")
+    if numberOfSpaces != -1:
+        return PlainTextResponse(str("white spaces not allowed in username!"), status_code=409)
+    if not username.isalnum():
+        return PlainTextResponse(str("Special Characters are not allowed in username except!"), status_code=409)
     if username in userdb.keys():
         logging.info(f"user alerady exist with username : {username}")
         returnMessage = "Username already exists please try again with another username"
@@ -155,12 +160,11 @@ def login(loginDetails : LoginDetailsDto):
     userdbFile = os.path.join(currentDir, 'userdb.json')
     logging.info(f"reading userdb file...")
     userdb = dict(json.loads(open(userdbFile).read()))
-    username = username.replace(" ","")
     if username in userdb.keys() and password == userdb[username]['password']:
-        logging.info(f"User found with userid: {username} and password: {password}")
+        logging.info(f"User found with username: {username} and password: {password}")
         return PlainTextResponse(str("Login Successfully"), status_code=200)
     else:
-        logging.info(f"User not found with userid: {username} and password: {password}")
+        logging.info(f"User not found with username: {username} and password: {password}")
         return PlainTextResponse(str("Invalid username or password"), status_code=409)
 
 
@@ -168,7 +172,7 @@ def login(loginDetails : LoginDetailsDto):
 def startSession(requestData:HeaderPayloadDto):
     logging.info(f'/sendData called with payload : {requestData}')
     currentDir = os.path.join(os.getcwd(),"allUsers")
-    child_dir = os.path.join(currentDir, requestData.userId)
+    child_dir = os.path.join(currentDir, requestData.username)
     fn = os.path.join(currentDir, 'filesData.json')
     filesData = dict(json.loads(open(fn).read()))
     filePath = os.path.join(child_dir, requestData.deviceId)
@@ -177,7 +181,7 @@ def startSession(requestData:HeaderPayloadDto):
     
     try:
         logging.info(f'Creating directory for user')
-        createDirectory(currentDir,requestData.userId)
+        createDirectory(currentDir,requestData.username)
     except:
         pass
     try:
@@ -246,29 +250,29 @@ def endSession(payload : EndSessionPayloadDto):
     logging.info(f'Sending csv file at path: {deviceId} with name : {payload.deviceId}.csv')
     return FileResponse(os.path.join(deviceId, f"{payload.deviceId}_{startTimestamp}_TO_{payload.sessionEndTime}.csv"))
 
-@app.get("/{userId}/devices", summary="Get list of devices by userId")
-def getAllDevices(userId : str):
-    logging.info(f"Fetching list of devices with userid: {userId}")
+@app.get("/{username}/devices", summary="Get list of devices by username")
+def getAllDevices(username : str):
+    logging.info(f"Fetching list of devices with username: {username}")
     currentDir = os.path.join(os.getcwd(),"allUsers") 
-    folder_path = os.path.join(currentDir, userId)
+    folder_path = os.path.join(currentDir, username)
     subfolders = get_subfolders(folder_path)
-    logging.info(f"Sending list of devices with userid: {userId}")
+    logging.info(f"Sending list of devices with username: {username}")
     return subfolders
 
-@app.get("/{userId}/{deviceId}/recordings", summary="Get list of recordings by userId and deviceId")
-def getAllRecordings(userId : str, deviceId : str):
-    logging.info(f"Fetching all recording of user: {userId} and device: {deviceId}")
+@app.get("/{username}/{deviceId}/recordings", summary="Get list of recordings by username and deviceId")
+def getAllRecordings(username : str, deviceId : str):
+    logging.info(f"Fetching all recording of user: {username} and device: {deviceId}")
     currentDir = os.path.join(os.getcwd(),"allUsers")
-    folder_path = os.path.join(currentDir, userId)
+    folder_path = os.path.join(currentDir, username)
     folder_path = os.path.join(folder_path, deviceId)
     subfolders = get_files_in_folder(folder_path)
-    logging.info(f"Sending all recording of user: {userId} and device: {deviceId}")
+    logging.info(f"Sending all recording of user: {username} and device: {deviceId}")
     return subfolders
 
-@app.get("/{userId}/{deviceId}/{recordingId}", summary="Get recording data by userId, deviceId, and recordingId")
-def getRecordingByUserIdAndDeviceId(userId : str, deviceId : str, recordingId:str):
-    logging.info(f"Fetching recording with userid: {userId} deviceid: {deviceId} and recording file: {recordingId}")
+@app.get("/{usename}/{deviceId}/{recordingId}", summary="Get recording data by username, deviceId, and recordingId")
+def getRecordingByusernameAndDeviceId(username : str, deviceId : str, recordingId:str):
+    logging.info(f"Fetching recording with username: {username} deviceid: {deviceId} and recording file: {recordingId}")
     currentDir = os.path.join(os.getcwd(),"allUsers")
-    filePath = os.path.join(currentDir, f"{userId}/{deviceId}/{recordingId}")
-    logging.info(f"Sending recording with userid: {userId} deviceid: {deviceId} and recording file: {recordingId}")
+    filePath = os.path.join(currentDir, f"{username}/{deviceId}/{recordingId}")
+    logging.info(f"Sending recording with username: {username} deviceid: {deviceId} and recording file: {recordingId}")
     return FileResponse(filePath)

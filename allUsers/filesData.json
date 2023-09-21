@@ -1,1 +1,14 @@
-{"dev": {"latest": "C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev/rawData\\startTime.bin", "others": ["C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev/rawData\\startTime.bin"]}, "dev2": {"latest": "C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev2/rawData\\startTime.bin", "others": ["C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev2/rawData\\startTime.bin"]}}
+{
+    "dev": {
+        "latest": "C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev/rawData\\startTime.bin",
+        "others": [
+            "C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev/rawData\\startTime.bin"
+        ]
+    },
+    "dev2": {
+        "latest": "C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev2/rawData\\startTime.bin",
+        "others": [
+            "C:\\Users\\baps\\OneDrive\\Documents\\Office\\FastAPI\\allUsers\\us\\dev2/rawData\\startTime.bin"
+        ]
+    }
+}
