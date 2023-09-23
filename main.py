@@ -242,10 +242,10 @@ def endSession(payload : EndSessionPayloadDto):
     logging.info("ascii to bin converted successfully")
     
     logging.info("generating breath rate")
-    os.system(f"python3 breath_darshan.py {deviceId}/output/result_PPI_{startTimestamp}.txt {deviceId} {deviceId}/{payload.deviceId}_BR.csv")
+    os.system(f"python3 breath_darshan.py {deviceId}/output/result_PPI_{startTimestamp}.txt {deviceId} {deviceId}/{payload.deviceId}_{startTimestamp}_BR.csv")
     logging.info("breath rate generated successfully")
 
-    os.system(f"python3 HR.py --input {deviceId}/output/result_HR_HRV_{startTimestamp}.txt --output {deviceId}/{payload.deviceId}_{startTimestamp}_TO_{payload.sessionEndTime}.csv --bin {latestFileName} --breath {deviceId}/{payload.deviceId}_BR.csv")
+    os.system(f"python3 HR.py --input {deviceId}/output/result_HR_HRV_{startTimestamp}.txt --output {deviceId}/{payload.deviceId}_{startTimestamp}_TO_{payload.sessionEndTime}.csv --bin {latestFileName} --breath {deviceId}/{payload.deviceId}_{startTimestamp}_BR.csv")
     logging.info("csv file generated successfully")
     logging.info(f'Sending csv file at path: {deviceId} with name : {payload.deviceId}.csv')
     return FileResponse(os.path.join(deviceId, f"{payload.deviceId}_{startTimestamp}_TO_{payload.sessionEndTime}.csv"))
@@ -269,7 +269,7 @@ def getAllRecordings(username : str, deviceId : str):
     logging.info(f"Sending all recording of user: {username} and device: {deviceId}")
     return subfolders
 
-@app.get("/{usename}/{deviceId}/{recordingId}", summary="Get recording data by username, deviceId, and recordingId")
+@app.get("/{username}/{deviceId}/{recordingId}", summary="Get recording data by username, deviceId, and recordingId")
 def getRecordingByusernameAndDeviceId(username : str, deviceId : str, recordingId:str):
     logging.info(f"Fetching recording with username: {username} deviceid: {deviceId} and recording file: {recordingId}")
     currentDir = os.path.join(os.getcwd(),"allUsers")

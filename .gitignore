@@ -1,4 +1,7 @@
-__pycache__/
+/__pycache__/
+/allUsers/
 *.pyc
 *.json
 test.py
+*.log
+*.gitignore
